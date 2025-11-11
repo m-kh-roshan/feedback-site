@@ -7,15 +7,16 @@ const insert = async(user_id, token) => {
     return tokenInserted
 }
 
-const destroy = async(token) => {
+const destroyByToken = async(token) => {
     const deletedToken = RefreshToken.destroy({where: { token: token }})
     return deletedToken
 }
 
 
 const findTokenByToken = async(token) => {
-    const tokens = await RefreshToken.findOne
+    const tokens = await RefreshToken.findOne({ where : { token: token } })
+    return tokens
 }
 
-module.exports = {insert, destroy}
+module.exports = {insert, destroyByToken, findTokenByToken}
 

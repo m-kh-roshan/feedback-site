@@ -11,9 +11,11 @@ const findbyEmail = async (email) => {
 
     return user
 }
-const getFeatures = async (search, filter, sort, category, user_id) => {
 
+const findbyId = async (id) => {
+    const user = User.findByPk(id)
+
+    return user
 }
-
 
 module.exports = {insertUser, findbyEmail}

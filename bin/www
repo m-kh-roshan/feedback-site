@@ -4,6 +4,8 @@
  * Module dependencies.
  */
 
+const {smartSync} = require("../utilities/syncChecker")
+
 const { sequelize } =  require('../models');
 
 var app = require('../app');
@@ -28,8 +30,8 @@ var server = http.createServer(app);
     await sequelize.authenticate();
     console.log('✅ Database connected')
 
-    await sequelize.sync({ alter: true })
-    console.log('✅ Tables synced');
+    
+    await smartSync();
 
     /**
      * Listen on provided port, on all network interfaces.

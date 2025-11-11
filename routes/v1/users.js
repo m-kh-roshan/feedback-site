@@ -10,6 +10,8 @@ router.get('/', function(req, res, next) {
 
 router.post('/', userController.insert)
 router.post('/login', userController.login)
+router.post('/token', userController.token)
+router.post('/logout', userController.logOut)
 router.get('/profile', authToken.authToken, userController.profile)
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken")
 const tokenSeviece = require("../services/tokenServices")
-require("dotenv").config()
+
 const generateTokens = async(user) => {
     user_token = { id: user.id, email: user.email }
     const access_token = jwt.sign(user_token, process.env.ACCESS_TOKEN_SECRET, {expiresIn:process.env.ACCESS_TOKEN_EXPIRES})

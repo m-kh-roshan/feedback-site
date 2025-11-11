@@ -1,7 +1,9 @@
 const Joi = require("joi");
 const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
 const userService = require("../services/userServices");
 const { generateTokens } = require("../utilities/tokenUtiles");
+const tokenService = require("../services/tokenServices");
 
 const insert = async (req, res) => {
     const schema = Joi.object({
@@ -60,6 +62,27 @@ const login = async(req, res) => {
     res.json(tokens)
 }
 
+const token = async(req, res, next) => {
+    const { refreshToken } = req.body
+    if(!refreshToken) return res.status(401).json({message: "No token"})
+
+    const token = await tokenService.findTokenByToken(refreshToken)
+    if(!token) return res.status(403).json({message: "Invalid refresh token"})
+    
+    try {
+        const payload = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+        const user = await userService.findbyEmail(payload.email)
+        if(!user) return res.status(403).json({message: "User not Found"})
+        
+        const tokens = await generateTokens(user)
+        const deleteToken = await tokenService.destroyByToken(refreshToken)
+
+        res.json(tokens)    
+    } catch (error) {
+        return res.status(403).json({message: "Expired or invalid refresh token"})  
+    }
+}
+
 const profile = async (req, res) => {
   const user = await userService.findbyEmail(req.user.email)
 
@@ -73,4 +96,14 @@ const profile = async (req, res) => {
   return res.json(user)
 }
 
-module.exports = {insert, login, profile}
+
+const logOut = async(req, res, next) => {
+    const { refreshToken } = req.body
+    if(!refreshToken) return res.status(401).json({message: "No token"})
+
+    const deleteToken = await tokenService.findTokenByToken(refreshToken)
+
+    res.json({message: "You loged out successfully"})
+}
+
+module.exports = {insert, login, profile, token, logOut}
