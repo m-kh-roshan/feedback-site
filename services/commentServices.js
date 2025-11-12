@@ -1,7 +1,7 @@
 const { User, Comment, Op, sequelize, Feature} = require("../models");
 
-const insertComment = async (user_id, featur_id, comment_id, body) => {
-    const insertResult = await Comment.create({ user_id: user_id, featur_id: featur_id, comment_id: comment_id, body: body })
+const insertComment = async (user_id, feature_id, comment_id, body) => {
+    const insertResult = await Comment.create({ user_id: user_id, feature_id: feature_id, comment_id: comment_id, body: body })
     return insertResult
 }
 

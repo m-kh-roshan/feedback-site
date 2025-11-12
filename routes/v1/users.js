@@ -1,14 +1,12 @@
-var express = require('express');
+const asyncRouter = require('../../helpers/asyncRouter')
 const userController = require('../../controllers/userController');
 const authToken = require('../../middlewares/authToken');
-var router = express.Router();
+const validations = require('../../validations/userValidation')
+const validateBody = require('../../middlewares/validateBody')
 
-/* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
-});
+const router = asyncRouter();
 
-router.post('/', userController.insert)
+router.post('/', validateBody(validations.createUser), userController.insert)
 router.post('/login', userController.login)
 router.post('/token', userController.token)
 router.post('/logout', userController.logOut)

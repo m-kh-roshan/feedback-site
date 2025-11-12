@@ -1,150 +1,112 @@
-const Joi = require("joi");
+
 const featureService = require("../services/featureServices");
 const userService = require("../services/userServices");
 const commentService = require("../services/commentServices");
+const AppError = require('../utilities/appError')
+
 
 const create = async (req, res, next) => {
-    const schema = Joi.object({
-            title : Joi.string().min(3).required(),
-            document : Joi.string(),
-            category: Joi.string(),
-            body: Joi.string()
-        })
-    const validateResult = schema.validate(req.body)
-    if(validateResult.error) 
-        return res.status(400).json({
-      code: "VALIDATION_ERROR",
-      message: validateResult.error.details[0].message,
-    });
-
+    const {title, document, category, body} = req.body
+    const user_id = req.user && req.user.id
     try {
-        await featureService.insert(req.body.title, req.body.document, req.user.id, req.body.category, req.body.body)
+        await featureService.insert(title, document, user_id, category, body)
         
         return res.status(201).json({
         code: "FEATURE_CREATED",
         message: "Your feature has been created successfully.",
       })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-        code: "FEATURE_CREATION_FAILED",
-        message: `Failed to create feature due to ${error}`,
-      });
+        if (!(error instanceof AppError)) {
+        return next(new AppError('Failed to create feature', 500, 'FEATURE_CREATION_FAILED'));
+        }
+        return next(error);
     }
 }
 
 const get = async (req, res, next) => {
-    const feature = await featureService.getFeature(req.params.id)
-    if (!feature) {
-        return res.status(404).json({
-            code: "NOT_FOUND",
-            message: "feature not found"
-        })
-    }
-    const comments = await commentService.getFeatureComments(req.params.id)
-
-    const voters = await featureService.getVoters(req.params.id)
-
-    const data = {
-        featue: feature,
-        comments: comments,
-        voters: voters
-    }
-    res.json(data)
-
-}
-
-const getAll = async (req, res) => {
-    const { search, filter, status, sort, category} = req.query
-    let user_id = null
-    if (filter == "my")
-        if (req.user) {
-            user_id = req.user.id
-        }
-        else {
-            return res.status(403).json({
-                message: "Forbidden"
-            })
-        }
-    const features = await featureService.getFeatures(search, status, sort, category, user_id)
-    return res.json(features)
-}
-
-const update = async (req, res) => {
-    const schema = Joi.object({
-        title : Joi.string().min(3).required(),
-        document : Joi.string(),
-        category: Joi.string(),
-        body: Joi.string(),
-        status: Joi.string()
-    })
-    const validateResult = schema.validate(req.body)
-    if(validateResult.error)
-        return res.status(400).json({
-      code: "VALIDATION_ERROR",
-      message: validateResult.error.details[0].message,
-    });
-    
-    const feature = await featureService.getFeature(req.params.id)
-
-    if (!feature) {
-        return res.status(404).json({
-            code: "NOT_FOUND",
-            message: "feature not found"
-        })
-    }
-    const user = await userService.findbyEmail(req.user.email)
-
     try {
-        if(feature.user_id === req.user.id || user.is_superuser) {
+        const feature_id = req.params.id
+        const feature = await featureService.getFeature(feature_id)
+        if (!feature) return next(new AppError('Feature not found', 404, 'NOT_FOUND'))
+        const comments = await commentService.getFeatureComments(feature_id)
 
-            await featureService.update(req.params.id, req.body.title, req.body.status, req.body.document, req.body.category, req.body.body)
-            return res.status(200).json({
-                code: "FEATURE_UPDATED",
-                message: "Your feature has been updated successfully.",
-            })
+        const voters = await featureService.getVoters(feature_id)
 
-        } else {
-            return res.status(403).json({
-                code: "PERMISSOIN_DENIED",
-                message: "permission denied.",
-            });
-        }
+        res.json({
+            code: 'FEATURE_FETCHED',
+            data: {  feature, comments, voters}
+        })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-        code: "FEATURE_CREATION_FAILED",
-        message: "Failed to create feature due to an unknown error.",
-      });
+        next(error)
+    }
+
+}
+
+const getAll = async (req, res, next) => {
+    try {
+        const { search, filter, status, sort, category} = req.query
+        let user_id = null
+        if (filter == "my")
+            if (req.user) user_id = req.user.id
+            else return next(new AppError('Forbidden', 403, 'FORBIDDEN'))
+
+        const features = await featureService.getFeatures(search, status, sort, category, user_id)
+        return res.json({
+            code: 'FEATURES_LIST',
+            data: features
+        })
+    } catch (error) {
+        return next(error)
     }
 }
 
-const destroy = async (req, res) => {
+const update = async (req, res, next) => {
     try {
-        const feature = await featureService.getFeature(req.params.id)
-        if (!feature) {
-            return res.status(404).json({
-                code: "NOT_FOUND",
-                message: "feature not found"
-            })
-        }
-        const user = await userService.findbyEmail(req.user.email)
+        const {title, status, document, category, body} = req.body
+        const feature_id = req.params.id
+        const feature = await featureService.getFeature(feature_id)
 
-        if(feature.user_id === req.user.id || user.is_superuser){
-            const result = await featureService.destroy(req.params.id)
-            return res.status(200).json({
-                code: "FEATURE_DELETED",
-                message: "Your feature has been deleted successfully.",
-            })
-
-        } else {
-            return res.status(403).json({
-                code: "PERMISSOIN_DENIED",
-                message: "permission denied.",
-            });
-        }
-    } catch (error) {
+        if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))
         
+        const user = await userService.findbyEmail(req.user.email)
+        const ownerField = feature.user_id
+        if(ownerField !== req.user.id || (ownerField === req.user.id && user.is_superuser)) {
+            return next(new AppError('Permission denied' ,403 ,'PERMISSOIN_DENIED'))
+        } 
+
+        await featureService.update(feature_id, title, status, document, category, body)
+        return res.status(200).json({
+            code: "FEATURE_UPDATED",
+            message: "Your feature has been updated successfully.",
+        })
+    
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const destroy = async (req, res, next) => {
+    try {
+        const feature_id = req.params.id
+        const feature = await featureService.getFeature(feature_id)
+
+        if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))
+
+        const user = await userService.findbyEmail(req.user.email)
+        const ownerField = feature.user_id
+
+       if(ownerField !== req.user.id || (ownerField === req.user.id && user.is_superuser)) {
+            return next(new AppError('Permission denied' ,403 ,'PERMISSOIN_DENIED'))
+        } 
+
+        const result = await featureService.destroy(feature_id)
+        return res.status(200).json({
+            code: "FEATURE_DELETED",
+            message: "Your feature has been deleted successfully.",
+        })
+
+    } catch (error) {
+        return next(error)
     }
 }
 
@@ -154,12 +116,7 @@ const vote = async (req, res) => {
 
     try {
         const feature = await featureService.getFeature(feature_id);
-        if (!feature) {
-            return res.status(404).json({
-                code: "NOT_FOUND",
-                message: "Feature not found",
-            });
-        }
+        if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))
 
         const status = await featureService.voteFeature(user_id, feature_id)
 
@@ -171,11 +128,7 @@ const vote = async (req, res) => {
 
 
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            code: "INTERNAL_ERROR",
-            message: "An unexpected error occurred",
-        });
+        return next(error)
     }
 }
 

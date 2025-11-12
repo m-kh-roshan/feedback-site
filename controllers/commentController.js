@@ -1,136 +1,84 @@
-const Joi = require("joi");
+
 const featureService = require("../services/featureServices");
 const userService = require("../services/userServices");
 const commentService = require("../services/commentServices");
+const AppError = require("../utilities/appError")
 
 const create = async (req, res, next) => {
-    const schema = Joi.object({
-            content: Joi.string().required(),
-            comment_id: Joi.number()
-        })
-    const validateResult = schema.validate(req.body)
-    if(validateResult.error) 
-        return res.status(400).json({
-        code: "VALIDATION_ERROR",
-        message: validateResult.error.details[0].message,
-    });
-
-    const featue = await featureService.getFeature(req.params.id)
-    if (!featue)
-        return res.status(404).json({
-            code: "NOT_FOUND",
-            message: "feature not found"
-        })
-
     try {
-        await commentService.insertComment(req.user.id, req.params.id, req.body.comment_id, req.body.body)
+        const {comment_id, body} = req.body
+        const feature_id = req.params.id
+        const feature = await featureService.getFeature(feature_id)
+        if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))    
+        
+        await commentService.insertComment(req.user.id, feature_id, comment_id, body)
         return res.status(201).json({
         code: "COMMENT_CREATED",
         message: "Your comment has been created successfully.",
       })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-        code: "COMMENT_CREATION_FAILED",
-        message: "Failed to create comment due to an unknown error.",
-      });
-        
+        return next(error)
     }
 }
 
 const update = async (req, res, next) => {
-    const schema = Joi.object({
-            content: Joi.string().required()
-        })
-    const validateResult = schema.validate(req.body)
-    if(validateResult.error) 
-        return res.status(400).json({
-        code: "VALIDATION_ERROR",
-        message: validateResult.error.details[0].message,
-    });
-
-    const featue = await featureService.getFeature(req.params.id)
-    if (!featue)
-        return res.status(404).json({
-            code: "NOT_FOUND",
-            message: "feature not found"
-        })
-
-    const comment = await commentService.getComment(req.params.commentId)
-    if (!comment)
-        return res.status(404).json({
-            code: "NOT_FOUND",
-            message: "comment not found"
-        })
-
     try {
-        if(comment.user_id === req.user.id) {
+        const {id, commentId} = req.params
+        const { body } = req.body
+        const feature = await featureService.getFeature(id)
+        if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))   
+    
+        const comment = await commentService.getComment(commentId)
+        if (!comment) return next(new AppError('Comment not found', 404, 'NOT_FOUND'))
 
-            await commentService.updateComment(req.params.commentId, req.body.body)
-            return res.status(200).json({
-                code: "COMMENT_UPDATED",
-                message: "Your comment has been updated successfully.",
-            })
-
-        } else {
-            return res.status(403).json({
-                code: "PERMISSOIN_DENIED",
-                message: "permission denied.",
-            });
+        const ownerField = comment.user_id
+        if(ownerField !== req.user.id) {
+            return next(new AppError('Permission denied' ,403 ,'PERMISSOIN_DENIED'))
         }
+
+        const feaureField = comment.feature_id
+        if(feaureField != id) {
+            return next(new AppError('The comment does not belong to the specified feature.' ,403 ,'COMMENT_FEATURE_MISMATCH'))
+        }
+
+        await commentService.updateComment(commentId, body)
+        return res.status(200).json({
+            code: "COMMENT_UPDATED",
+            message: "Your comment has been updated successfully.",
+        })
+
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-        code: "COMMENT_UPDATING_FAILED",
-        message: "Failed to updateing comment due to an unknown error.",
-      });
-        
+        return next(error)
     }
 }
 
 const deleteComment = async (req, res, next) => {
-    
-        const comment = await commentService.getComment(req.params.commentId)
-        if (!comment)
-            return res.status(404).json({
-                code: "NOT_FOUND",
-                message: "comment not found"
-            })
-
-        const featue = await featureService.getFeature(req.params.id)
-        if (!featue)
-            return res.status(404).json({
-                code: "NOT_FOUND",
-                message: "feature not found"
-            })
     try {
-        if(comment.user_id == req.user.id){
-            if (comment.feature_id == req.params.id) {
-                
-                await commentService.destroyComment(req.params.commentId)
-                return res.status(200).json({
-                    code: "COMMENT_DELETED",
-                    message: "Your comment has been deleted successfully.",
-                })
-            } else {
-                return res.status(400).json({
-                    code: "COMMENT_FEATURE_MISMATCH",
-                    message: "The comment does not belong to the specified feature.",
-                });
-            }
+        const {id, commentId} = req.params
+        const comment = await commentService.getComment(commentId)
+        if (!comment) return next(new AppError('Comment not found', 404, 'NOT_FOUND'))
 
-        } else {
-            return res.status(403).json({
-                code: "PERMISSOIN_DENIED",
-                message: "permission denied.",
-            });
+        const feature = await featureService.getFeature(id)
+        if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))
+        
+        const ownerField = comment.user_id
+        if(ownerField != req.user.id) {
+            return next(new AppError('Permission denied' ,403 ,'PERMISSOIN_DENIED'))
         }
+
+        const feaureField = comment.feature_id
+        if(feaureField != id) {
+            return next(new AppError('The comment does not belong to the specified feature.' ,403 ,'COMMENT_FEATURE_MISMATCH'))
+        }
+
+        await commentService.destroyComment(commentId)
+        return res.status(200).json({
+            code: "COMMENT_DELETED",
+            message: "Your comment has been deleted successfully.",
+        })
+        
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-        code: "COMMENT_DELETING_FAILED",
-        message: "Failed to deleting comment due to an unknown error.",
-      });
+        return next(error)
     }
 }
 
@@ -141,43 +89,24 @@ const like = async (req, res, next) => {
 
     try {
         const featureExists = await featureService.getFeature(feature);
-        if (!featureExists) {
-            return res.status(404).json({
-                code: "NOT_FOUND",
-                message: "Feature not found",
-            });
-        }
+        if (!featureExists) return next(new AppError('feature not found', 404, 'NOT_FOUND'))
+
         const commentExists = await commentService(comment);
-        if (!commentExists) {
-            return res.status(404).json({
-                code: "NOT_FOUND",
-                message: "comment not found",
-            });
+        if (!commentExists) return next(new AppError('Comment not found', 404, 'NOT_FOUND'))
+
+        const feaureField = commentExists.feature_id
+        if(feaureField != feature) {
+            return next(new AppError('The comment does not belong to the specified feature.' ,403 ,'COMMENT_FEATURE_MISMATCH'))
         }
 
-        if (feature == commentExists.feature_id) {
-            const status = await commentService.likeComment(comment, user)
-
-            return res.status(200).json({
-                code: `FEATURE_${status.status.toUpperCase()}`,
-                message: `Feature ${status.status} successfully`,
-                data: status,
-            });
-            
-        } else {
-            return res.status(400).json({
-                code: "COMMENT_FEATURE_MISMATCH",
-                message: "The comment does not belong to the specified feature.",
-            });
-        }
-            
-        
-    } catch (error) {
-        console.error(error);
-            return res.status(500).json({
-            code: "INTERNAL_ERROR",
-            message: "An unexpected error occurred",
+        const status = await commentService.likeComment(comment, user)
+        return res.status(200).json({
+            code: `COMMENT_${status.status.toUpperCase()}`,
+            message: `Comment ${status.status} successfully`,
+            data: status,
         });
+    } catch (error) {
+        return next(error)
     }    
 }
 
