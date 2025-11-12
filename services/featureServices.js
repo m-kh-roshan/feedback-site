@@ -99,5 +99,15 @@ const voteFeature = async (user_id, feature_id) => {
     return result
 }
 
+const getVoters = async (id) => {
+    const feature = await Feature.findByPk(id)
 
-module.exports = {insert, getFeature, getFeatures, update, destroy, voteFeature}
+    const voters = await feature.getVoters({
+        attributes: ['id', 'username']
+    })
+
+    return voters
+}
+
+
+module.exports = {insert, getFeature, getFeatures, update, destroy, voteFeature, getVoters}

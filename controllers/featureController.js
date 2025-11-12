@@ -1,6 +1,7 @@
 const Joi = require("joi");
 const featureService = require("../services/featureServices");
 const userService = require("../services/userServices");
+const commentService = require("../services/commentServices");
 
 const create = async (req, res, next) => {
     const schema = Joi.object({
@@ -30,6 +31,27 @@ const create = async (req, res, next) => {
         message: `Failed to create feature due to ${error}`,
       });
     }
+}
+
+const get = async (req, res, next) => {
+    const feature = await featureService.getFeature(req.params.id)
+    if (!feature) {
+        return res.status(404).json({
+            code: "NOT_FOUND",
+            message: "feature not found"
+        })
+    }
+    const comments = await commentService.getFeatureComments(req.params.id)
+
+    const voters = await featureService.getVoters(req.params.id)
+
+    const data = {
+        featue: feature,
+        comments: comments,
+        voters: voters
+    }
+    res.json(data)
+
 }
 
 const getAll = async (req, res) => {
@@ -157,4 +179,4 @@ const vote = async (req, res) => {
     }
 }
 
-module.exports = {create, getAll, update, destroy, vote}
+module.exports = {create, get, getAll, update, destroy, vote}
