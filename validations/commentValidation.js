@@ -6,7 +6,7 @@ const createComment = Joi.object({
 })
 
 const updateComment = Joi.object({
-    content: Joi.string().required()
+    body: Joi.string().required()
 })
 
 module.exports = {createComment, updateComment}

@@ -1,4 +1,4 @@
-const { User, Comment, Op, sequelize, Feature} = require("../models");
+const { User, Comment, Op, sequelize, Feature, Sequelize} = require("../models");
 
 const insertComment = async (user_id, feature_id, comment_id, body) => {
     const insertResult = await Comment.create({ user_id: user_id, feature_id: feature_id, comment_id: comment_id, body: body })
@@ -22,7 +22,21 @@ const getComment = async (id) => {
 const getFeatureComments = async (feature_id) => {
     const feature = await Feature.findByPk(feature_id)
 
-    const comments = await feature.getComments()
+    const comments = await feature.getComments({
+        attributes: [
+            'id', 
+            'comment_id', 
+            'body',
+            [
+                Sequelize.literal(`(
+                    SELECT COUNT(*)
+                    FROM likes AS cl
+                    WHERE cl.comment_id = Comment.id
+                )`),
+                'likes_count'
+            ]
+        ]
+    })
 
     return comments
 }
@@ -45,10 +59,10 @@ const likeComment = async (comment_id, user_id) => {
         await user.removeLikedComment(comment)
         status = "unliked"
     } else {
-        await user.addlikedComment(comment)
+        await user.addLikedComment(comment)
     }
 
-    const total = await comment.countlikers()
+    const total = await comment.countLikers()
 
     const result = {
         status: status,

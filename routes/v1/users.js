@@ -31,7 +31,7 @@ const router = asyncRouter();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/UserRegisterResponse'
+ *               $ref: '#/components/schemas/UserCodeMessageResponse'
  *       400:
  *         description: Validation error
  */
@@ -99,18 +99,38 @@ router.post('/token', userController.token)
  *           schema:
  *             $ref: '#/components/schemas/UserToken'
  *     security:
- *       - BrearAuth: [] 
+ *       - BearerAuth: [] 
  *     responses:
  *       200:
  *         description: User successfully logged out
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/UserRegisterResponse'
+ *               $ref: '#/components/schemas/UserCodeMessageResponse'
  *       400:
  *         description: Validation error (user nout found & No token)
  */
 router.post('/logout', authToken.authToken, userController.logOut)
+
+
+/**
+ * @swagger
+ * /users/profile:
+ *   get:
+ *     summary: User profile
+ *     tags: [Users]
+ *     security:
+ *       - BearerAuth: [] 
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserProfileResponse'
+ *       400:
+ *         description: Validation error (user nout found & No token)
+ */
 router.get('/profile', authToken.authToken, userController.profile)
 
 module.exports = router;

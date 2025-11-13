@@ -37,16 +37,13 @@
  *           type: string
  *           example: adminadmin
 
- *     UserRegisterResponse:
+ *     UserCodeMessageResponse:
  *       type: object
  *       properties:
  *         code:
  *           type: string
- *           example: USER_CREATED
  *         message:
  *           type: string
- *           example: Your account has been created successfully.
- 
 
  *     LoginResponseData:
  *       type: object
@@ -78,6 +75,30 @@
  *         refreshToken:
  *           type: string
  *           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ * 
+ * 
+ *     ProfileResponseData:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: number
+ *           example: 1
+ *         username:
+ *           type: string
+ *           example: reza
+ *         email:
+ *           type: string
+ *           example: reza@gmail.com
+ * 
+ *     UserProfileResponse:
+ *       type: object
+ *       properties:
+ *         code:
+ *           type: string
+ *         message:
+ *           type: string
+ *         data:
+ *           $ref: '#/components/schemas/ProfileResponseData'
  * 
  * 
  * 

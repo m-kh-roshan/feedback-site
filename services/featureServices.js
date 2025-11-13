@@ -1,4 +1,4 @@
-const { User, Feature, Op, sequelize} = require("../models");
+const { User, Feature, Op, sequelize, Sequelize} = require("../models");
 
 const insert = async(title, document, user_id, category, body) => {
     const insertResult = await Feature.create({ title:title, document:document, user_id:user_id, category:category, body:body })
@@ -19,10 +19,29 @@ const update = async (id, title, status, document, category, body) => {
 
     return updateResult
 }
-
 const getFeature = async (id) => {
-    const feature = Feature.findByPk(id)
-    return feature
+  const feature = await Feature.findByPk(id, {
+    attributes: [
+      'id', 
+      'title', 
+      'body', 
+      'user_id', 
+      'status', 
+      'image', 
+      'category', 
+      'createdAt',
+      [
+        Sequelize.literal(`(
+          SELECT COUNT(*) 
+          FROM votes 
+          WHERE votes.feature_id = Feature.id
+        )`),
+        'vote_count'
+      ]
+    ]
+  })
+
+  return feature
 }
 
 const getFeatures = async (search, status, sort, category, user_id) => {
@@ -103,7 +122,8 @@ const getVoters = async (id) => {
     const feature = await Feature.findByPk(id)
 
     const voters = await feature.getVoters({
-        attributes: ['id', 'username']
+        attributes: ['id', 'username'],
+        through: { attributes: [] }
     })
 
     return voters

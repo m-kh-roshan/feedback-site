@@ -26,6 +26,7 @@ const update = async (req, res, next) => {
         const {id, commentId} = req.params
         const { body } = req.body
         const feature = await featureService.getFeature(id)
+        console.log(feature)
         if (!feature) return next(new AppError('feature not found', 404, 'NOT_FOUND'))   
     
         const comment = await commentService.getComment(commentId)
@@ -91,7 +92,7 @@ const like = async (req, res, next) => {
         const featureExists = await featureService.getFeature(feature);
         if (!featureExists) return next(new AppError('feature not found', 404, 'NOT_FOUND'))
 
-        const commentExists = await commentService(comment);
+        const commentExists = await commentService.getComment(comment);
         if (!commentExists) return next(new AppError('Comment not found', 404, 'NOT_FOUND'))
 
         const feaureField = commentExists.feature_id
