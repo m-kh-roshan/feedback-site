@@ -9,6 +9,7 @@ const AppError = require('../utilities/appError')
 const insert = async (req, res, next) => {
   try {
     const { password, confirm_password, email } = req.body
+    console.log('password:', password, 'confirm_password:', confirm_password)
     if (password != confirm_password) return next(new AppError('Password confirmation does not match.', 400, 'PASSWORD_MISMATCH'))
       
     const userByEmail = await userService.findbyEmail(email)
