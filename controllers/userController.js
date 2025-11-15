@@ -1,10 +1,12 @@
 const Joi = require("joi");
 const bcrypt = require("bcrypt")
+const crypto = require('crypto')
 const jwt = require("jsonwebtoken")
 const userService = require("../services/userServices");
 const { generateTokens } = require("../utilities/tokenUtiles");
 const tokenService = require("../services/tokenServices");
 const AppError = require('../utilities/appError')
+const emailConfig = require('../utilities/emailConfig')
 
 const insert = async (req, res, next) => {
   try {
@@ -17,6 +19,15 @@ const insert = async (req, res, next) => {
 
     const hashed_password = await bcrypt.hash(password, 10)
     const resultInsertUser = await userService.insertUser(email, hashed_password)
+
+    const data = {
+      email_token: crypto.randomBytes(32).toString("hex"),
+      email_token_expire: new Date(Date.now() + 60 * 60 * 1000)
+    }
+    const updateUserEmailToken = userService.update(resultInsertUser.id,  data)
+
+    const emailResponse = await emailConfig.sendMail(email, 'Confirm Email', 'confirm email please', emailConfig.confirmEmailBody(data.email_token, resultInsertUser.username), next)
+    console.log(emailResponse)
     return res.status(201).json({
       code: "USER_CREATED",
       message: "Your account has been created successfully."

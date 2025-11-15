@@ -18,4 +18,15 @@ const findbyId = async (id) => {
     return user
 }
 
-module.exports = {insertUser, findbyEmail}
+const update = async (id, data) => {
+    const updateResult = User.update(
+        data,
+        {
+            where: { id: id }
+        }
+    ) 
+
+    return updateResult
+}
+
+module.exports = {insertUser, findbyEmail, update}

@@ -1,25 +1,41 @@
 const request = require('supertest')
 const app = require('../../app')
 const { User, sequelize } = require('../../models')
+const { generateTokens } = require('../../utilities/tokenUtiles')
+const bcrypt = require('bcrypt')
 
-const userInfo = {
+const newUser = {
     email: "testUser@examole.com",
     password: "test1user2password3",
     wrongPass: "testwrongPass"
 }
+const userExists = {
+    email: 'userExist@example.com',
+    password: 'usexpass123',
+    wrongPass: "usExWrongPass"
+}
+const userNotExists = {
+    email: 'userNotExist@example.com',
+    password: 'usNoExPass123'
+}
+let userToken 
 
 beforeAll(async () => {
-    const userExists = {
-        email: 'userExist',
-        password: 'usexpass123'
+    const CheckUserExists = await User.findOne({ where : { email : userExists.email } })
+    if (!CheckUserExists) {
+        const hashed_password = await bcrypt.hash(userExists.password, 10)
+        const InsertUserExists = await User.create({email: userExists.email, password: hashed_password })
+        userToken = await generateTokens(InsertUserExists)
+    } else userToken =  await generateTokens(CheckUserExists)
+
+    const checkUserNotExists = await User.findOne({ where: { email: userNotExists.email } })
+    if (checkUserNotExists) {
+        const destroyUserNotExists = await User.destroy({ where: { email: userNotExists.email } })
     }
-    const CheckUser = await User.findOne({ where : { email : userExists.email } })
-    if (!CheckUser) {
-        const InsertUser = await User.create({email: userExists.email, password: userExists.password })
-    }
+
 })
 afterAll(async () => {
-    const userExist = await User.destroy({ where: { email: userInfo.email } })
+    const userExist = await User.destroy({ where: { email: newUser.email } })
     app.close && app.close()
 });
 
@@ -27,24 +43,24 @@ describe('User API integration test', () => {
     describe('POST /api/v1/users', () => {
         it('should register a new user', async() => {
             const res = await request(app).post('/api/v1/users').send({
-            email: userInfo.email,
-            password: userInfo.password,
-            confirm_password: userInfo.password
+            email: newUser.email,
+            password: newUser.password,
+            confirm_password: newUser.password
             })
 
             expect(res.statusCode).toBe(201)
             expect(res.body.code).toBe('USER_CREATED')
             expect(res.body.message).toMatch(/successfully/)
     
-            const userInDb = await User.findOne({where: {email: userInfo.email}})
+            const userInDb = await User.findOne({where: {email: newUser.email}})
             expect(userInDb).not.toBeNull()
         })
 
         it('should return error if email is exists', async() => {
             const res = await request(app).post('/api/v1/users').send({
-            email: userInfo.email,
-            password: 'password123',
-            confirm_password: 'password123'
+            email: userExists.email,
+            password: userExists.password,
+            confirm_password: userExists.password
             })
 
             expect(res.statusCode).toBe(400)
@@ -53,9 +69,9 @@ describe('User API integration test', () => {
 
         it('should return error if passwords do not match', async() => {
             const res = await request(app).post('/api/v1/users').send({
-            email: 'reza@example.com',
-            password: 'password123',
-            confirm_password: 'password12'
+            email: newUser.email,
+            password: newUser.password,
+            confirm_password: newUser.wrongPass
             })
 
             expect(res.statusCode).toBe(400)
@@ -67,8 +83,8 @@ describe('User API integration test', () => {
     describe('POST /api/v1/users/login', () => {
         it('should login user', async() => {
             const res = await request(app).post('/api/v1/users/login').send({
-            email: 'testuser8@example.com',
-            password: 'password123'
+            email: userExists.email,
+            password: userExists.password
             })
 
             expect(res.statusCode).toBe(200)
@@ -80,8 +96,8 @@ describe('User API integration test', () => {
 
         it('should return error if user is not exists', async() => {
             const res = await request(app).post('/api/v1/users/login').send({
-            email: 'gsddv@dfdsff.com',
-            password: 'password123'
+            email: userNotExists.email,
+            password: userNotExists.password
             })
 
             expect(res.statusCode).toBe(400)
@@ -90,8 +106,8 @@ describe('User API integration test', () => {
 
         it('should return error if password can not compare by hashed password', async() => {
             const res = await request(app).post('/api/v1/users/login').send({
-            email: 'reza@example.com',
-            password: 'dfdfdfbdfbfb',
+            email: userExists.email,
+            password: userExists.wrongPass,
             })
 
             expect(res.statusCode).toBe(401)
@@ -103,7 +119,7 @@ describe('User API integration test', () => {
     describe('POST /api/v1/users/token', () => {
         it('should login user', async() => {
             const res = await request(app).post('/api/v1/users/token').send({
-            refreshToken: 'TOKENS_ISSUED'
+            refreshToken: userToken.refresh_token
             })
 
             expect(res.statusCode).toBe(200)
@@ -113,25 +129,22 @@ describe('User API integration test', () => {
             expect(res.body.message).toMatch(/successfully/)
         })
 
-        it('should return error if user is not exists', async() => {
-            const res = await request(app).post('/api/v1/users/login').send({
-            email: 'gsddv@dfdsff.com',
-            password: 'password123'
-            })
-
-            expect(res.statusCode).toBe(400)
-            expect(res.body.code).toBe('NOT_FOUND');
-        })
-
-        it('should return error if password can not compare by hashed password', async() => {
-            const res = await request(app).post('/api/v1/users/login').send({
-            email: 'reza@example.com',
-            password: 'dfdfdfbdfbfb',
+        it('should return error if refreshToken is not exists', async() => {
+            const res = await request(app).post('/api/v1/users/token').send({
+            refreshToken: null
             })
 
             expect(res.statusCode).toBe(401)
-            expect(res.body.code).toBe('INVALID_CREDENTIALS');
+            expect(res.body.code).toBe('NO_TOKEN');
+        })
 
+        it('should return error if pinvalid refresh token', async() => {
+            const res = await request(app).post('/api/v1/users/token').send({
+            refreshToken: 'invalidRefreshToken'
+            })
+
+            expect(res.statusCode).toBe(403)
+            expect(res.body.code).toBe('INVALID_REFRESH_TOKEN');
         })
     })
 })

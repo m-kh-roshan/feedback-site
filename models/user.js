@@ -25,7 +25,12 @@ module.exports = (sequelize, DataTypes) => {
             allowNull:false,
             validate: { len: [8, 255] }
         },
-        is_superuser: {type: DataTypes.BOOLEAN, defaultValue:false, allowNull:false}
+        is_superuser: {type: DataTypes.BOOLEAN, defaultValue:false, allowNull:false},
+        email_verified: {type: DataTypes.BOOLEAN, defaultValue:false, allowNull:false},
+        email_token: {type: DataTypes.STRING, allowNull: true},
+        email_token_expire: {type: DataTypes.DATE, allowNull: true},
+        reset_password_token: {type: DataTypes.STRING, allowNull: true},
+        reset_password_token_expire: {type: DataTypes.DATE, allowNull: true}
     },
     {
         tableName: "users",
