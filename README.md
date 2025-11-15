@@ -116,7 +116,7 @@ cd feedbackSite
 npm install
 npm run dev
 
-Make sure to configure your .env file:
+#Make sure to configure your .env file:
 DB_HOST=
 DB_USER=
 DB_PASSWORD=
@@ -126,7 +126,7 @@ SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
-
+```
 📝 Roadmap / TODO
 
  Add admin dashboard
