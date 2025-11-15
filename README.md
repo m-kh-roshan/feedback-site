@@ -45,7 +45,7 @@ It creates a small, collaborative community where users help shape a project by 
 ---
 
 ## 📦 Project Structure
-
+```
 feedbackSite
 │
 ├── models/ # Table definitions + relationships
@@ -56,7 +56,7 @@ feedbackSite
 ├── middleware/ # Authentication, error handling, etc.
 ├── tests/ # Unit & integration tests (Jest + Supertest)
 └── utilities/ # App configuration (emailing, JWT helpers, AppError, ...)
-
+```
 
 ---
 
