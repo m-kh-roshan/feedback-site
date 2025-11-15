@@ -23,6 +23,15 @@
  *         confirm_password:
  *           type: string
  *           example: strongpassword123
+ * 
+ *     UserResendEmail:
+ *       type: object
+ *       required:
+ *         - email
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: johndoe@example.com
 
  *     UserLogin:
  *       type: object
@@ -99,6 +108,24 @@
  *           type: string
  *         data:
  *           $ref: '#/components/schemas/ProfileResponseData'
+ * 
+ * 
+ *     ResetPassword:
+ *       type: object
+ *       required:
+ *         - token
+ *         - password
+ *         - confirm_password
+ *       properties:
+ *         token:
+ *           type: string
+ *           example: 'a87f3ef2aa918edb80bdssacs...'
+ *         password:
+ *           type: string
+ *           example: strongpassword123
+ *         confirm_password:
+ *           type: string
+ *           example: strongpassword123
  * 
  * 
  * 

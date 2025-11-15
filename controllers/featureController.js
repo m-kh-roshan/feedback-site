@@ -70,7 +70,7 @@ const update = async (req, res, next) => {
         
         const user = await userService.findbyEmail(req.user.email)
         const ownerField = feature.user_id
-        if(ownerField !== req.user.id || (ownerField === req.user.id && user.is_superuser)) {
+        if(ownerField !== req.user.id && !user.is_superuser) {
             return next(new AppError('Permission denied' ,403 ,'PERMISSOIN_DENIED'))
         } 
 
@@ -95,7 +95,7 @@ const destroy = async (req, res, next) => {
         const user = await userService.findbyEmail(req.user.email)
         const ownerField = feature.user_id
 
-       if(ownerField !== req.user.id || (ownerField === req.user.id && user.is_superuser)) {
+       if(ownerField !== req.user.id && !user.is_superuser) {
             return next(new AppError('Permission denied' ,403 ,'PERMISSOIN_DENIED'))
         } 
 
@@ -110,7 +110,7 @@ const destroy = async (req, res, next) => {
     }
 }
 
-const vote = async (req, res) => {
+const vote = async (req, res, next) => {
     const feature_id = req.params.id
     const user_id = req.user.id
 

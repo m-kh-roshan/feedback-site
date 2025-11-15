@@ -3,12 +3,12 @@
 const { RefreshToken } = require("../models");
 
 const insert = async(user_id, token) => {
-    const tokenInserted = RefreshToken.create({user_id, token})
+    const tokenInserted = await RefreshToken.create({user_id, token})
     return tokenInserted
 }
 
 const destroyByToken = async(token) => {
-    const deletedToken = RefreshToken.destroy({where: { token: token }})
+    const deletedToken = await RefreshToken.destroy({where: { token: token }})
     return deletedToken
 }
 

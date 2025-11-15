@@ -10,7 +10,7 @@ const insert = async(title, document, user_id, category, body) => {
 }
 
 const update = async (id, title, status, document, category, body) => {
-    const updateResult = Feature.update(
+    const updateResult = await Feature.update(
         {title: title, status:status , document:document, category:category, body:body},
         {
             where: { id: id }
@@ -53,42 +53,42 @@ const getFeatures = async (search, status, sort, category, user_id) => {
             sort_word = "createdAt"
     const features = await Feature.findAll({
         where: {
-      ...(search && {
-        [Op.or]: [
-          { title: { [Op.like]: `%${search}%` } },
-          { body: { [Op.like]: `%${search}%` } },
+          ...(search && {
+            [Op.or]: [
+              { title: { [Op.like]: `%${search}%` } },
+              { body: { [Op.like]: `%${search}%` } },
+            ],
+          }),
+          ...(category && { category }),
+          ...(status && { status }),
+          ...(user_id && { user_id }),
+        },
+        include: [
+          { model: User, as: 'user', attributes: ['username'] },
+          {
+            model: User,
+            as: 'voters',
+            attributes: [],
+            through: { attributes: [] },
+            required: false
+          },
         ],
-      }),
-      ...(category && { category }),
-      ...(status && { status }),
-      ...(user_id && { user_id }),
-    },
-    include: [
-      { model: User, as: 'user', attributes: ['username'] },
-      {
-        model: User,
-        as: 'voters',
-        attributes: [],
-        through: { attributes: [] },
-        required: false
-      },
-    ],
-    attributes: {
-      include: [
-        [sequelize.fn('COUNT', sequelize.col('voters.id')), 'vote_count'],
-      ],
-    },
-    group: ['Feature.id', 'user.id'],
-    order: sort === "top" 
-        ? [[sequelize.literal('vote_count'), 'DESC']] 
-        : [['createdAt', 'DESC']],
+        attributes: {
+          include: [
+            [sequelize.fn('COUNT', sequelize.col('voters.id')), 'vote_count'],
+          ],
+        },
+        group: ['Feature.id', 'user.id'],
+        order: sort === "top" 
+            ? [[sequelize.literal('vote_count'), 'DESC']] 
+            : [['createdAt', 'DESC']],
     })
 
     return features
 }
 
 const destroy = async (id) => {
-    const destroyResult = Feature.destroy({
+    const destroyResult = await Feature.destroy({
         where: { id: id }
     })
 

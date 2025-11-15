@@ -24,7 +24,7 @@ const insert = async (req, res, next) => {
       email_token: crypto.randomBytes(32).toString("hex"),
       email_token_expire: new Date(Date.now() + 60 * 60 * 1000)
     }
-    const updateUserEmailToken = userService.update(resultInsertUser.id,  data)
+    const updateUserEmailToken = await userService.update(resultInsertUser.id,  data)
 
     const emailResponse = await emailConfig.sendMail(email, 'Confirm Email', 'confirm email please', emailConfig.confirmEmailBody(data.email_token, resultInsertUser.username), next)
     console.log(emailResponse)
@@ -32,6 +32,52 @@ const insert = async (req, res, next) => {
       code: "USER_CREATED",
       message: "Your account has been created successfully."
     });
+  } catch (error) {
+    return next(error)
+  }
+}
+
+const emailVerify = async (req, res, next) => {
+  try {
+    const {token} = req.query
+    const user = await userService.findByTokens(token)
+
+    if(!user) return next(new AppError('User not found', 400, 'NOT_FOUND'))
+
+    if(user.email_verified) return next(new AppError('User is already verified', 400, 'ALREADY_VERIFIED'))
+    
+    const data = {
+      email_verified: true
+    }
+    const resultUpdateUser = userService.update(user.id, data)
+    return res.status(200).json({
+      code: "EMAIL_VERIFIED",
+      message: "Your email has been verified successfully."
+    });
+  } catch (error) {
+    return next(error)
+  }
+}
+
+const resendEmailVerify = async (req, res, next) => {
+  try {
+    const { email } = req.body
+    const user = await userService.findbyEmail(email)
+    if(!user) return next(new AppError('User not found', 400, 'NOT_FOUND'))
+    if(user.email_verified) return next(new AppError('User is already verified', 400, 'ALREADY_VERIFIED'))
+
+    const data = {
+      email_token: crypto.randomBytes(32).toString("hex"),
+      email_token_expire: new Date(Date.now() + 60 * 60 * 1000)
+    }
+    const updateUserEmailToken = await userService.update(user.id,  data)
+
+    const emailResponse = await emailConfig.sendMail(email, 'Confirm Email', 'confirm email please', emailConfig.confirmEmailBody(data.email_token, user.username), next)
+    return res.status(200).json({
+      code: "EMAIL_SENT",
+      message: "Email confirming sent successfully"
+    });
+
   } catch (error) {
     return next(error)
   }
@@ -104,6 +150,53 @@ const profile = async (req, res, next) => {
   }
 }
 
+const resetPasswordEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body
+    const user = await userService.findbyEmail(email)
+    if(!user) return next(new AppError('User not found', 400, 'NOT_FOUND'))
+    
+    const data = {
+      reset_password_token: crypto.randomBytes(32).toString("hex"),
+      reset_password_token_expire: new Date(Date.now() + 60 * 60 * 1000)
+    }
+    const updateUserResetPasswordToken = await userService.update(user.id,  data)
+
+    const emailResponse = await emailConfig.sendMail(email, 'Reset Password', 'Reset password by click on this link', emailConfig.resetPasswordBody(data.reset_password_token, user.username), next)
+    return res.status(200).json({
+      code: "EMAIL_SENT",
+      message: "Reset password email sent successfully"
+    });
+  } catch (error) {
+    return next(error)
+  }
+}
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { password, confirm_password, token } = req.body
+
+    const user = await userService.findByTokens(token)
+    if(!user) return next(new AppError('User not found', 400, 'NOT_FOUND'))
+
+    if (password != confirm_password) return next(new AppError('Password confirmation does not match.', 400, 'PASSWORD_MISMATCH'))
+    
+    const hashed_password = await bcrypt.hash(password, 10)
+
+    const data = {
+      password: hashed_password,
+      reset_password_token_expire: Date.now()
+    }
+    const resultResetPassword = await userService.update(user.id, data)
+    return res.status(200).json({
+      code: "PASSWORD_RESET",
+      message: "Password reset successfully"
+    });
+  } catch (error) {
+    return next(error)
+  }
+}
+
 
 const logOut = async(req, res, next) => {
   try {
@@ -122,4 +215,4 @@ const logOut = async(req, res, next) => {
   }
 }
 
-module.exports = {insert, login, profile, token, logOut}
+module.exports = {insert, emailVerify, login, profile, token, logOut, resendEmailVerify, resetPassword, resetPasswordEmail}
