@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../app');
-const { User, sequelize } = require('../../models');
+const { User, sequelize, RefreshToken } = require('../../models');
 const { generateTokens } = require('../../utilities/tokenUtiles');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
@@ -9,11 +9,15 @@ let testUser, otherUser;
 let testToken;
 
 const newUser = {
-    email: `newuser${Date.now()}@test.com`,
+    email: `newuser19999@test.com`,
     password: 'Password123!',
     confirm_password: 'Password123!'
 }
 beforeAll(async () => {
+  const existUsers = await User.findAll({ where: { email: ['integration@test.com', 'verified@test.com', 'newuser19999@test.com'] } })
+  const user_ids = existUsers.map(({ id }) => id);
+  await RefreshToken.destroy({ where: { user_id: user_ids } })
+  const existTestUser = await User.destroy({ where: { id: user_ids } })
 
   const hashedPassword = await bcrypt.hash('Test1234!', 10);
   testUser = await User.create({
