@@ -24,7 +24,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 setupSwagger(app)
-console.log('📘 Swagger docs available at http://localhost:3001/api-docs');
+console.log('📘 Swagger docs available at http://localhost:3000/api-docs');
 
 app.use('/', indexRouter);
 app.use('/api/v1/users', usersRouter);
