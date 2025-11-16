@@ -5,7 +5,7 @@ const { generateTokens } = require('../../utilities/tokenUtiles');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-let testUser, otherUser;
+let testUser, otherUser, resendUser;
 let testToken;
 
 const newUser = {
@@ -14,7 +14,7 @@ const newUser = {
     confirm_password: 'Password123!'
 }
 beforeAll(async () => {
-  const existUsers = await User.findAll({ where: { email: ['integration@test.com', 'verified@test.com', 'newuser19999@test.com'] } })
+  const existUsers = await User.findAll({ where: { email: ['integration@test.com', 'verified@test.com', 'newuser19999@test.com', 'resendUser@test.com'] } })
   const user_ids = existUsers.map(({ id }) => id);
   await RefreshToken.destroy({ where: { user_id: user_ids } })
   const existTestUser = await User.destroy({ where: { id: user_ids } })
@@ -23,22 +23,29 @@ beforeAll(async () => {
   testUser = await User.create({
     email: 'integration@test.com',
     password: hashedPassword,
-    username: 'integrationUser'
   });
+
+  const hashedPassword3 = await bcrypt.hash('Test1234!', 10);
+  resendUser = await User.create({
+    email: 'resendUser@test.com',
+    password: hashedPassword
+  });
+
 
   testToken = await generateTokens(testUser);
 
   const hashedPassword2 = await bcrypt.hash('Verified123!', 10);
+  const token = crypto.randomBytes(32).toString('hex')
   otherUser = await User.create({
     email: 'verified@test.com',
     password: hashedPassword2,
-    username: 'verifiedUser',
+    email_token: token,
     email_verified: true
   });
 });
 
 afterAll(async () => {
-  await RefreshToken.destroy({ where: { user_id: [testUser.id, otherUser.id] } });
+  await RefreshToken.destroy({ where: { user_id: [testUser.id, otherUser.id, resendUser.id] } });
   await User.destroy({ where: { id: [testUser.id, otherUser.id] } });
   await User.destroy({ where : { email: newUser.email }});
   app.close && app.close();
@@ -53,7 +60,7 @@ describe('User Controller Integration Tests', () => {
       expect(res.statusCode).toBe(201);
       expect(res.body.code).toBe('USER_CREATED');
 
-      const userInDb = await User.findOne({ where: { email } });
+      const userInDb = await User.findOne({ where: { email: newUser.email } });
       expect(userInDb).not.toBeNull();
     });
 
@@ -97,8 +104,8 @@ describe('User Controller Integration Tests', () => {
     });
 
     it('should fail if user already verified', async () => {
-      const verifiedUser = await User.findOne({ where: { id: otherUser.id } });
-      const res = await request(app).get(`/api/v1/users/confirmEmail?token=${verifiedUser.email_token}`);
+      const verification_token = await otherUser.email_token
+      const res = await request(app).get(`/api/v1/users/confirmEmail?token=${verification_token}`);
       expect(res.statusCode).toBe(400);
       expect(res.body.code).toBe('ALREADY_VERIFIED');
     });
@@ -196,7 +203,8 @@ describe('User Controller Integration Tests', () => {
 
   describe('POST /api/v1/users/resendEmail', () => {
     it('should resend email verification', async () => {
-      const res = await request(app).post('/api/v1/users/resendEmail').send({ email: testUser.email });
+      const verfication_email = await resendUser.email
+      const res = await request(app).post('/api/v1/users/resendEmail').send({ email: verfication_email });
       expect(res.statusCode).toBe(200);
       expect(res.body.code).toBe('EMAIL_SENT');
     });
