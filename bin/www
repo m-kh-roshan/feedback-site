@@ -5,7 +5,6 @@
  */
 
 require("dotenv").config();
-const {smartSync} = require("../utilities/syncChecker")
 const { sequelize } =  require('../models');
 
 
@@ -30,9 +29,6 @@ var server = http.createServer(app);
   try {
     await sequelize.authenticate();
     console.log('✅ Database connected')
-
-    
-    await smartSync();
 
     /**
      * Listen on provided port, on all network interfaces.
