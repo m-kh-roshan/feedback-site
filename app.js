@@ -1,4 +1,3 @@
-require("dotenv").config();
 const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
@@ -22,7 +21,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
+console.log(`user database and password is: ${process.env.DB_USER}, ${process.env.DB_PASSWORD}`)
 setupSwagger(app)
 console.log('📘 Swagger docs available at http://localhost:3000/api-docs');
 

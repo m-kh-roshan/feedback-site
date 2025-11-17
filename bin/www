@@ -4,9 +4,10 @@
  * Module dependencies.
  */
 
+require("dotenv").config();
 const {smartSync} = require("../utilities/syncChecker")
-
 const { sequelize } =  require('../models');
+
 
 var app = require('../app');
 var debug = require('debug')('feedback-site:server');
